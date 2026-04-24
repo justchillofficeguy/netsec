@@ -1,0 +1,932 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>IPCN Interface Manager</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.2/babel.min.js"></script>
+<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Sora:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* ── DARK MODE ── */
+:root {
+  --bg:#050D1A;--bg2:#091426;--bg3:#0D1C35;
+  --border:#1A3560;--border2:#254878;
+  --teal:#0EA5C9;--cyan:#38BDF8;
+  --green:#22C55E;--red:#EF4444;--amber:#F59E0B;
+  --purple:#A78BFA;--gold:#FCD34D;
+  --text:#E2EBF8;--muted:#7B97B8;--dim:#2E4A6A;
+  --header-bg:rgba(5,13,26,.93);
+  --grid:rgba(26,53,96,.2);
+  --row-hover:rgba(255,255,255,.025);
+  --thead:var(--bg2);
+  --input-bg:var(--bg3);
+  --modal-bg:var(--bg2);
+  --toggle-track:#1A3560;
+}
+html.light {
+  --bg:#F0F5FC;--bg2:#E4EDF8;--bg3:#FFFFFF;
+  --border:#C5D5EA;--border2:#9BB5D6;
+  --teal:#0284C7;--cyan:#0369A1;
+  --green:#16A34A;--red:#DC2626;--amber:#D97706;
+  --purple:#7C3AED;--gold:#B45309;
+  --text:#0F172A;--muted:#475569;--dim:#94A3B8;
+  --header-bg:rgba(240,245,252,.96);
+  --grid:rgba(148,180,220,.22);
+  --row-hover:rgba(0,0,0,.02);
+  --thead:#E4EDF8;
+  --input-bg:#FFFFFF;
+  --modal-bg:#F8FAFF;
+  --toggle-track:#C5D5EA;
+}
+html.transitioning *{transition:background-color .22s,border-color .22s,color .15s !important}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;overflow:hidden;font-family:'Sora',sans-serif;background:var(--bg);color:var(--text)}
+body::before{content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:40px 40px}
+#root{position:relative;z-index:1;height:100vh;display:flex;flex-direction:column}
+
+/* TOPBAR */
+.topbar{height:54px;display:flex;align-items:center;gap:14px;padding:0 22px;
+  background:var(--header-bg);border-bottom:1px solid var(--border);
+  backdrop-filter:blur(12px);flex-shrink:0}
+.logo{display:flex;align-items:center;gap:10px;flex-shrink:0}
+.logo-mark{width:28px;height:28px;border-radius:7px;background:linear-gradient(135deg,var(--teal),var(--cyan));
+  display:flex;align-items:center;justify-content:center;font-size:14px}
+.logo-name{font-family:'JetBrains Mono',monospace;font-size:13px;font-weight:700}
+.logo-sub{font-size:9px;color:var(--muted);letter-spacing:2px;text-transform:uppercase}
+.status-pill{display:flex;align-items:center;gap:6px;font-size:11px;padding:5px 11px;
+  border-radius:20px;border:1px solid var(--border);background:rgba(128,128,128,.05);white-space:nowrap}
+.dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.dot-ok{background:var(--green);box-shadow:0 0 5px var(--green)}
+.dot-warn{background:var(--amber);animation:blink 1.5s infinite}
+.dot-err{background:var(--red)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.topbar-spacer{flex:1}
+
+/* BUTTONS */
+.btn{background:transparent;border:1px solid var(--border);color:var(--text);
+  font-family:'Sora',sans-serif;font-size:12px;font-weight:500;padding:6px 13px;
+  border-radius:7px;cursor:pointer;display:inline-flex;align-items:center;gap:5px;
+  transition:border-color .12s,color .12s,background .12s;white-space:nowrap}
+.btn:hover{border-color:var(--teal);color:var(--cyan)}
+.btn-primary{background:var(--teal);border-color:var(--teal);color:#fff}
+.btn-primary:hover{background:#0891B2;border-color:#0891B2;color:#fff}
+.btn-success{background:var(--green);border-color:var(--green);color:#fff}
+.btn-success:hover{background:#15803D;color:#fff}
+.btn-danger{border-color:rgba(220,38,38,.4);color:var(--red)}
+.btn-danger:hover{background:rgba(220,38,38,.1);border-color:var(--red)}
+.btn-sm{padding:4px 9px;font-size:11px;border-radius:5px}
+
+/* THEME TOGGLE */
+.theme-toggle{display:flex;align-items:center;gap:7px;background:var(--toggle-track);
+  border:1px solid var(--border2);border-radius:20px;padding:4px 10px 4px 5px;
+  cursor:pointer;user-select:none;flex-shrink:0}
+.theme-toggle:hover{border-color:var(--teal)}
+.tt-track{width:32px;height:18px;border-radius:9px;background:var(--border2);position:relative}
+html.light .tt-track{background:var(--teal)}
+.tt-thumb{width:12px;height:12px;border-radius:50%;background:#fff;position:absolute;
+  top:3px;left:3px;box-shadow:0 1px 3px rgba(0,0,0,.3);transition:transform .2s}
+html.light .tt-thumb{transform:translateX(14px)}
+.tt-lbl{font-size:10px;font-weight:600;letter-spacing:.5px;color:var(--muted)}
+
+/* LAYOUT */
+.layout{display:flex;flex:1;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:196px;flex-shrink:0;background:var(--bg2);border-right:1px solid var(--border);
+  display:flex;flex-direction:column;overflow-y:auto}
+.sidebar-sec{padding:10px 0}
+.sidebar-lbl{font-size:9px;letter-spacing:2px;text-transform:uppercase;color:var(--dim);padding:0 13px 6px}
+.nav-item{display:flex;align-items:center;gap:8px;padding:8px 13px;cursor:pointer;
+  font-size:12px;color:var(--muted);border-left:2px solid transparent;transition:all .1s}
+.nav-item:hover{color:var(--text);background:rgba(128,128,128,.04)}
+.nav-item.active{color:var(--cyan);border-left-color:var(--teal);background:rgba(14,165,201,.07)}
+.nav-icon{font-size:13px;width:15px;text-align:center;flex-shrink:0}
+.nav-count{margin-left:auto;font-size:10px;font-family:'JetBrains Mono',monospace;
+  color:var(--dim);background:rgba(128,128,128,.06);padding:1px 6px;border-radius:10px}
+.nav-item.active .nav-count{color:var(--cyan);background:rgba(14,165,201,.14)}
+
+/* CONTENT */
+.content{flex:1;display:flex;flex-direction:column;overflow:hidden}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;
+  background:var(--border);border-bottom:1px solid var(--border);flex-shrink:0}
+.stat-cell{background:var(--bg2);padding:9px 14px;display:flex;align-items:center;gap:10px}
+.stat-val{font-family:'JetBrains Mono',monospace;font-size:17px;font-weight:700}
+.stat-lbl{font-size:9px;color:var(--dim);letter-spacing:.5px;text-transform:uppercase;margin-top:1px}
+.stat-icon{font-size:18px;opacity:.18}
+
+/* TOOLBAR */
+.toolbar{display:flex;align-items:center;gap:8px;padding:10px 18px;
+  background:var(--bg2);border-bottom:1px solid var(--border);flex-shrink:0;flex-wrap:wrap}
+.search-wrap{position:relative;flex:1;min-width:180px}
+.search-icon{position:absolute;left:9px;top:50%;transform:translateY(-50%);color:var(--dim);font-size:13px;pointer-events:none}
+input[type=text],select{background:var(--input-bg);border:1px solid var(--border);
+  color:var(--text);font-family:'Sora',sans-serif;font-size:12px;border-radius:7px;outline:none}
+input[type=text]{width:100%;padding:7px 9px 7px 30px}
+select{padding:7px 10px;cursor:pointer}
+input[type=text]:focus,select:focus{border-color:var(--teal)}
+.toolbar-r{display:flex;align-items:center;gap:8px;margin-left:auto}
+.result-info{font-size:11px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+
+/* TABLE */
+.table-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.table-wrap{flex:1;overflow:auto}
+table{width:100%;border-collapse:collapse;font-size:12px}
+thead{position:sticky;top:0;z-index:5}
+th{background:var(--thead);color:var(--muted);font-weight:600;font-size:10px;
+  letter-spacing:1px;text-transform:uppercase;padding:9px 11px;text-align:left;
+  border-bottom:1px solid var(--border2);white-space:nowrap;cursor:pointer;user-select:none}
+th:hover{color:var(--text)}
+th.sorted{color:var(--cyan)}
+td{padding:8px 11px;border-bottom:1px solid rgba(26,53,96,.35);color:var(--muted);vertical-align:middle}
+tr:hover td{background:var(--row-hover)}
+tr.selected-row td{background:rgba(14,165,201,.07)}
+.td-device{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);font-weight:600}
+.td-intf{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--text);font-weight:500}
+.td-ip{font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--gold)}
+.td-no{font-size:10px;color:var(--dim);font-family:'JetBrains Mono',monospace}
+
+/* BADGE */
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
+.b-trunk{background:rgba(252,211,77,.12);color:var(--gold)}
+.b-access{background:rgba(34,197,94,.12);color:var(--green)}
+.b-eth{background:rgba(56,189,248,.12);color:var(--cyan)}
+.b-sub{background:rgba(167,139,250,.12);color:var(--purple)}
+.b-empty{background:rgba(128,128,128,.08);color:var(--dim)}
+.b-inuse{background:rgba(34,197,94,.12);color:var(--green)}
+.b-avail{background:rgba(245,158,11,.12);color:var(--amber)}
+
+/* TABLE FOOTER */
+.table-footer{display:flex;align-items:center;justify-content:space-between;
+  padding:8px 15px;border-top:1px solid var(--border);background:var(--bg2);
+  flex-shrink:0;font-size:11px;color:var(--dim)}
+.pagination{display:flex;gap:3px}
+.pg-btn{background:transparent;border:1px solid var(--border);color:var(--muted);
+  padding:3px 8px;border-radius:5px;font-size:11px;cursor:pointer;
+  font-family:'JetBrains Mono',monospace;transition:all .1s}
+.pg-btn:hover{border-color:var(--teal);color:var(--cyan)}
+.pg-btn.active{background:var(--teal);border-color:var(--teal);color:#fff}
+.pg-btn:disabled{opacity:.25;cursor:default}
+
+/* MODAL */
+.overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);
+  backdrop-filter:blur(4px);display:flex;align-items:center;justify-content:center}
+.modal{background:var(--modal-bg);border:1px solid var(--border2);border-radius:13px;
+  width:540px;max-height:90vh;overflow-y:auto;animation:modalIn .18s ease}
+@keyframes modalIn{from{transform:scale(.95);opacity:0}to{transform:scale(1);opacity:1}}
+.modal-hdr{display:flex;align-items:center;justify-content:space-between;
+  padding:16px 22px;border-bottom:1px solid var(--border)}
+.modal-title{font-size:15px;font-weight:600}
+.modal-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;line-height:1}
+.modal-close:hover{color:var(--text)}
+.modal-body{padding:22px}
+.modal-ftr{display:flex;justify-content:flex-end;gap:8px;padding:14px 22px;border-top:1px solid var(--border)}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:13px}
+.form-full{grid-column:1/-1}
+.form-group{display:flex;flex-direction:column;gap:5px}
+.form-label{font-size:10px;font-weight:600;color:var(--muted);letter-spacing:.5px;text-transform:uppercase}
+.form-input,.form-select{background:var(--input-bg);border:1px solid var(--border);color:var(--text);
+  font-family:'Sora',sans-serif;font-size:13px;padding:8px 11px;border-radius:8px;
+  outline:none;width:100%;transition:border-color .12s}
+.form-input:focus,.form-select:focus{border-color:var(--teal)}
+.form-select{cursor:pointer}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;right:22px;z-index:300;
+  background:var(--bg2);border:1px solid var(--border2);border-radius:10px;
+  padding:11px 16px;font-size:13px;display:flex;align-items:center;gap:9px;
+  max-width:340px;animation:toastIn .25s ease}
+@keyframes toastIn{from{transform:translateY(20px);opacity:0}to{transform:translateY(0);opacity:1}}
+
+/* SETUP */
+.setup-modal{background:var(--modal-bg);border:1px solid var(--border2);border-radius:16px;
+  width:550px;padding:32px;max-height:90vh;overflow-y:auto;animation:modalIn .18s ease}
+.setup-step{display:flex;gap:13px;padding:14px;background:var(--bg3);
+  border:1px solid var(--border);border-radius:10px;margin-bottom:9px}
+.step-num{width:24px;height:24px;border-radius:50%;background:var(--teal);color:#fff;
+  font-size:11px;font-weight:700;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.step-title{font-size:13px;font-weight:600;margin-bottom:3px}
+.step-desc{font-size:12px;color:var(--muted);line-height:1.6}
+.step-code{background:var(--bg);border:1px solid var(--border);border-radius:6px;
+  padding:7px 10px;font-family:'JetBrains Mono',monospace;font-size:11px;color:var(--teal);
+  margin-top:7px;word-break:break-all}
+
+/* SYNC */
+.sync-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.6);
+  backdrop-filter:blur(3px);display:flex;flex-direction:column;
+  align-items:center;justify-content:center;gap:14px}
+.spinner{width:34px;height:34px;border:3px solid var(--border2);border-top-color:var(--teal);
+  border-radius:50%;animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.sync-msg{font-size:13px;color:var(--muted)}
+
+/* EMPTY */
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;
+  flex:1;gap:10px;color:var(--dim);padding:60px}
+.empty-icon{font-size:36px;opacity:.3}
+
+/* MARK highlight */
+mark{background:rgba(252,211,77,.22);color:var(--gold);border-radius:2px;padding:0 1px}
+
+::-webkit-scrollbar{width:5px;height:5px}
+::-webkit-scrollbar-track{background:var(--bg2)}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+::-webkit-scrollbar-thumb:hover{background:var(--teal)}
+</style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useEffect, useCallback, useMemo, useRef } = React;
+
+// ─── SEED DATA ────────────────────────────────────────────────────────────────
+const SEED = {"iface":{"VG":[{"device":"C4C VG1","side":"Primary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-GE0/2/3]"},{"device":"C4C VG2","side":"Secondary","no":1,"interface":"sfp28-1","type":"Ethernet","vlan":"","ip":"","desc":"[CR1-C4C-G0/2/5-DWS]"},{"device":"C4C VG1","side":"Primary","no":2,"interface":"sfp28-2","type":"Trunk","vlan":"","ip":"","desc":"[CR2-GE0/2/3]"},{"device":"C4C VG2","side":"Secondary","no":2,"interface":"sfp28-2","type":"Ethernet","vlan":"","ip":"","desc":"[CR2-C4C-G0/2/5-DWS]"},{"device":"C4C VG1","side":"Primary","no":3,"interface":"sfp28-3","type":"Trunk","vlan":"","ip":"","desc":"[NGFW1-port3]"},{"device":"C4C VG2","side":"Secondary","no":3,"interface":"sfp28-3","type":"Ethernet","vlan":"","ip":"","desc":"[NGFW2-port3]"},{"device":"G1G VG1","side":"Primary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-G1G]"},{"device":"G1G VG2","side":"Secondary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-G1G]"},{"device":"G1K VG1","side":"Primary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-G1K]"},{"device":"G1K VG2","side":"Secondary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-G1K]"},{"device":"G1L VG1","side":"Primary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-G1L]"},{"device":"G1L VG2","side":"Secondary","no":1,"interface":"sfp28-1","type":"Trunk","vlan":"","ip":"","desc":"[CR1-G1L]"}],"MR":[{"device":"MR1-C4C","side":"Primary","no":1,"interface":"GE0/0/0","type":"Ethernet","vlan":"","ip":"","desc":"WAN Moratel"},{"device":"MR2-C4C","side":"Secondary","no":1,"interface":"GE0/0/0","type":"Ethernet","vlan":"","ip":"","desc":"WAN Telkom"},{"device":"MR3-G1G","side":"Primary","no":1,"interface":"GE0/0/0","type":"Trunk","vlan":"","ip":"","desc":"WAN Metro-E"},{"device":"MR1-G1K","side":"Primary","no":1,"interface":"GE0/0/0","type":"Trunk","vlan":"","ip":"","desc":"WAN Metro-E"},{"device":"MR1-G1L","side":"Primary","no":1,"interface":"GE0/0/0","type":"Trunk","vlan":"","ip":"","desc":"WAN Metro-E"}],"MSW":[{"device":"MSW1-C4C","side":"Primary","no":1,"interface":"GE0/0/1","type":"Access","vlan":"621","ip":"","desc":"Mgmt VLAN C4C"},{"device":"MSW2-C4C","side":"Secondary","no":1,"interface":"GE0/0/1","type":"Access","vlan":"622","ip":"","desc":"Mgmt VLAN C4C"},{"device":"MSW1-G1G","side":"Primary","no":1,"interface":"GE0/0/1","type":"Access","vlan":"721","ip":"","desc":"Mgmt VLAN G1G"}],"CR":[{"device":"CR1-C4C","side":"Primary","no":1,"interface":"GE0/2/3","type":"Trunk","vlan":"","ip":"","desc":"[VG1-sfp28-1]"},{"device":"CR2-C4C","side":"Secondary","no":1,"interface":"GE0/2/3","type":"Trunk","vlan":"","ip":"","desc":"[VG2-sfp28-1]"},{"device":"CR1-G1G","side":"Primary","no":1,"interface":"GE0/0/0","type":"Trunk","vlan":"","ip":"","desc":"Uplink ke MR3"},{"device":"CR1-G1K","side":"Primary","no":1,"interface":"GE0/0/0","type":"Trunk","vlan":"","ip":"","desc":"Uplink ke MR1"},{"device":"CR1-G1L","side":"Primary","no":1,"interface":"GE0/0/0","type":"Trunk","vlan":"","ip":"","desc":"Uplink ke MR1"}],"CSW":[{"device":"CSW1-C4C","side":"Primary","no":1,"interface":"GE0/0/1","type":"Trunk","vlan":"","ip":"","desc":"Uplink to CR1-C4C"},{"device":"CSW2-C4C","side":"Secondary","no":1,"interface":"GE0/0/1","type":"Trunk","vlan":"","ip":"","desc":"Uplink to CR2-C4C"},{"device":"C4C-AGG","side":"Primary","no":1,"interface":"GE0/0/1","type":"Trunk","vlan":"","ip":"","desc":"Aggregation uplink"}],"NGFW":[{"device":"NGFW1-C4C","side":"Primary","no":1,"interface":"Port X1","type":"","vlan":"","ip":"","desc":"WAN Interface"},{"device":"NGFW2-C4C","side":"Secondary","no":1,"interface":"Port X1","type":"","vlan":"","ip":"","desc":"WAN Interface"},{"device":"NGFW1-G1G","side":"Primary","no":1,"interface":"Port X1","type":"","vlan":"","ip":"","desc":"WAN Interface"},{"device":"NGFW1-G1K","side":"Primary","no":1,"interface":"Port X1","type":"","vlan":"","ip":"","desc":"WAN Interface"},{"device":"NGFW1-G1L","side":"Primary","no":1,"interface":"Port X1","type":"","vlan":"","ip":"","desc":"WAN Interface"}],"SRVESXI":[{"device":"SRV-ESXi-C4C","side":"Primary","no":1,"interface":"vmnic0","type":"Ethernet","vlan":"","ip":"","desc":"Management vmkernel"},{"device":"SRV-ESXi-C4C","side":"Primary","no":2,"interface":"vmnic1","type":"Trunk","vlan":"","ip":"","desc":"vSwitch trunk"},{"device":"CHR-C4C","side":"Secondary","no":1,"interface":"ether1","type":"Ethernet","vlan":"","ip":"","desc":"WAN uplink"}],"Mikrotik":[{"device":"C0A-AMAIRA","side":"Primary","no":1,"interface":"ether1","type":"Ethernet","vlan":"251","ip":"","desc":"OOB Management"},{"device":"C0A-KAMILA","side":"Secondary","no":1,"interface":"ether1","type":"Ethernet","vlan":"252","ip":"","desc":"OOB Management"},{"device":"C0A-AMAIRA","side":"Primary","no":2,"interface":"ether2","type":"Trunk","vlan":"","ip":"","desc":"Uplink to MSW"}]},"vlan":{"G1G":[{"no":1,"allocation":"Dataplane IPCN","range":"101-120","vlan":101,"desc":"PTP Router-1 <> Fortigate","status":"Available"},{"no":2,"allocation":"Dataplane IPCN","range":"101-120","vlan":102,"desc":"PTP Router-2 <> Fortigate","status":"Available"},{"no":3,"allocation":"Dataplane IPCN","range":"101-120","vlan":104,"desc":"","status":"Available"},{"no":4,"allocation":"Management IPCN","range":"721-740","vlan":721,"desc":"Management VLAN G1G","status":"Available"},{"no":5,"allocation":"Management IPCN","range":"721-740","vlan":722,"desc":"Management VLAN G1G-2","status":"Available"},{"no":6,"allocation":"Server Farm","range":"751-760","vlan":751,"desc":"Server Farm G1G","status":"Available"}],"G1K":[{"no":1,"allocation":"Dataplane IPCN","range":"101-120","vlan":101,"desc":"PTP Router-1 <> Fortigate","status":"Available"},{"no":2,"allocation":"Management IPCN","range":"821-840","vlan":821,"desc":"Management VLAN G1K","status":"Available"},{"no":3,"allocation":"Management IPCN","range":"821-840","vlan":822,"desc":"Management VLAN G1K-2","status":"Available"}],"G1L":[{"no":1,"allocation":"Dataplane IPCN","range":"101-120","vlan":101,"desc":"PTP Router-1 <> Fortigate","status":"Available"},{"no":2,"allocation":"Management IPCN","range":"821-840","vlan":821,"desc":"Management VLAN G1L","status":"Available"}],"Jabodetabek":[{"no":1,"allocation":"Dataplane nIF","range":"251-253","vlan":251,"desc":"OOB AMAIRA","status":"Available"},{"no":2,"allocation":"Dataplane nIF","range":"251-253","vlan":252,"desc":"OOB KAMILA","status":"Available"},{"no":3,"allocation":"Dataplane nIF","range":"251-253","vlan":253,"desc":"OOB PDU","status":"Available"}],"Surabaya":[{"no":1,"allocation":"Dataplane IPCN","range":"101-120","vlan":101,"desc":"PTP Router-1 <> Fortigate","status":"Available"},{"no":2,"allocation":"Management IPCN","range":"621-640","vlan":621,"desc":"Management VLAN Surabaya","status":"Available"}]}};
+
+const GS_BASE   = 'https://sheets.googleapis.com/v4/spreadsheets';
+const IFACE_COLS = ['device','side','no','interface','type','vlan','ip','desc'];
+const VLAN_COLS  = ['no','allocation','range','vlan','desc','status'];
+const PAGE_SIZE  = 80;
+
+const IFACE_SHEETS = ['VG','MR','MSW','CR','CSW','NGFW','SRVESXI','Mikrotik'];
+const VLAN_SHEETS  = ['G1G','G1K','G1L','Jabodetabek','Surabaya'];
+
+const NAV_ICONS = {VG:'⇄',MR:'↔',MSW:'⊟',CR:'◈',CSW:'◉',NGFW:'🔥',SRVESXI:'🖥',Mikrotik:'⚡'};
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
+const esc  = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const deep = o => JSON.parse(JSON.stringify(o));
+
+function hlText(text, q) {
+  if (!q || !text) return text;
+  const parts = String(text).split(new RegExp(`(${q.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')})`, 'gi'));
+  return parts.map((p, i) => i % 2 === 1 ? <mark key={i}>{p}</mark> : p);
+}
+
+function TypeBadge({ type, q }) {
+  const map = { Trunk:'b-trunk', Access:'b-access', Ethernet:'b-eth', 'Sub Interface':'b-sub' };
+  const cls = map[type] || 'b-empty';
+  return <span className={`badge ${cls}`}>{q ? hlText(type||'—', q) : (type||'—')}</span>;
+}
+
+function loadLocal() {
+  try {
+    const d = localStorage.getItem('ipcn_data');
+    return d ? JSON.parse(d) : null;
+  } catch { return null; }
+}
+function saveLocal(data) {
+  localStorage.setItem('ipcn_data', JSON.stringify(data));
+}
+
+// ─── TOAST COMPONENT ─────────────────────────────────────────────────────────
+function Toast({ toasts }) {
+  return (
+    <div style={{position:'fixed',bottom:22,right:22,zIndex:300,display:'flex',flexDirection:'column',gap:8}}>
+      {toasts.map(t => (
+        <div key={t.id} className="toast" style={{borderColor: t.color+'55'}}>
+          <span>{t.icon}</span><span>{t.msg}</span>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+// ─── MODAL FORM COMPONENT ─────────────────────────────────────────────────────
+function RowModal({ isIface, row, onSave, onClose, title }) {
+  const [form, setForm] = useState(() => row ? {...row} : {});
+  const set = (k, v) => setForm(f => ({...f, [k]: v}));
+
+  const ifaceFields = [
+    {k:'device',    label:'Device',         type:'text',   half:true},
+    {k:'side',      label:'Side',           type:'select', opts:['Primary','Secondary'], half:true},
+    {k:'no',        label:'No',             type:'number', half:true},
+    {k:'interface', label:'Interface',      type:'text',   half:true},
+    {k:'type',      label:'Interface Type', type:'select', opts:['','Trunk','Access','Ethernet','Sub Interface'], half:true},
+    {k:'vlan',      label:'VLAN',           type:'text',   half:true},
+    {k:'ip',        label:'IP Address',     type:'text',   half:true},
+    {k:'desc',      label:'Deskripsi',      type:'text',   half:false},
+  ];
+  const vlanFields = [
+    {k:'no',        label:'No',       type:'number', half:true},
+    {k:'allocation',label:'Alokasi',  type:'select', opts:['Dataplane IPCN','Dataplane nIF','Dataplane Kacific','Management IPCN','Management nIF','Server Farm'], half:true},
+    {k:'range',     label:'Range',    type:'text',   half:true},
+    {k:'vlan',      label:'VLAN ID',  type:'number', half:true},
+    {k:'status',    label:'Status',   type:'select', opts:['Available','In Use'], half:true},
+    {k:'desc',      label:'Deskripsi',type:'text',   half:false},
+  ];
+  const fields = isIface ? ifaceFields : vlanFields;
+
+  const handleSave = () => {
+    const out = {...form};
+    if (out.no !== undefined) out.no = out.no === '' ? '' : Number(out.no);
+    if (out.vlan !== undefined && isIface === false) out.vlan = out.vlan === '' ? '' : Number(out.vlan);
+    onSave(out);
+  };
+
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <div className="modal-hdr">
+          <div className="modal-title">{title}</div>
+          <button className="modal-close" onClick={onClose}>✕</button>
+        </div>
+        <div className="modal-body">
+          <div className="form-grid">
+            {fields.map(f => (
+              <div key={f.k} className={`form-group${f.half ? '' : ' form-full'}`}>
+                <label className="form-label">{f.label}</label>
+                {f.type === 'select' ? (
+                  <select className="form-select" value={form[f.k] ?? ''} onChange={e => set(f.k, e.target.value)}>
+                    {f.opts.map(o => <option key={o} value={o}>{o || '— pilih —'}</option>)}
+                  </select>
+                ) : (
+                  <input className="form-input" type={f.type} value={form[f.k] ?? ''} onChange={e => set(f.k, e.target.value)} placeholder={f.label} />
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="modal-ftr">
+          <button className="btn" onClick={onClose}>Batal</button>
+          <button className="btn btn-primary" onClick={handleSave}>Simpan</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── SETUP MODAL COMPONENT ────────────────────────────────────────────────────
+function SetupModal({ sheetId, apiKey, onSave, onOffline, onClose }) {
+  const [sid, setSid] = useState(sheetId);
+  const [key, setKey] = useState(apiKey);
+  return (
+    <div className="overlay" onClick={e => e.target === e.currentTarget && onClose()}>
+      <div className="setup-modal">
+        <div style={{fontSize:20,fontWeight:700,marginBottom:4}}>🔗 Setup Google Sheets</div>
+        <div style={{fontSize:13,color:'var(--muted)',marginBottom:22,lineHeight:1.6}}>
+          Ikuti langkah berikut untuk menghubungkan app ini dengan Google Sheets sebagai database.
+        </div>
+
+        {[
+          {n:1, title:'Buat Google Sheets baru', desc:'Buat spreadsheet baru di sheets.google.com. Buat tab dengan nama: VG, MR, MSW, CR, CSW, NGFW, SRVESXI, Mikrotik, VLAN_G1G, VLAN_G1K, VLAN_G1L, VLAN_Jabodetabek, VLAN_Surabaya', code:null},
+          {n:2, title:'Aktifkan Google Sheets API', desc:'Buka console.cloud.google.com → buat project → aktifkan Google Sheets API → buat API Key di Credentials.', code:'console.cloud.google.com → APIs & Services → Credentials → Create API Key'},
+          {n:3, title:'Set permission "Anyone with link can edit"', desc:'Di Google Sheets → Share → Change to Anyone with the link → pilih Editor agar app bisa write data.', code:null},
+          {n:4, title:'Copy Spreadsheet ID dari URL', desc:'Spreadsheet ID ada di URL: docs.google.com/spreadsheets/d/[ID INI]/edit', code:null},
+        ].map(s => (
+          <div key={s.n} className="setup-step">
+            <div className="step-num">{s.n}</div>
+            <div>
+              <div className="step-title">{s.title}</div>
+              <div className="step-desc">{s.desc}</div>
+              {s.code && <div className="step-code">{s.code}</div>}
+            </div>
+          </div>
+        ))}
+
+        <div style={{display:'flex',flexDirection:'column',gap:10,margin:'18px 0'}}>
+          <div className="form-group">
+            <label className="form-label">Spreadsheet ID</label>
+            <input className="form-input" style={{fontFamily:'JetBrains Mono',fontSize:12}} value={sid} onChange={e=>setSid(e.target.value)} placeholder="1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgVE2upms" />
+          </div>
+          <div className="form-group">
+            <label className="form-label">Google API Key</label>
+            <input className="form-input" type="password" value={key} onChange={e=>setKey(e.target.value)} placeholder="AIzaSy..." />
+          </div>
+        </div>
+
+        <div style={{display:'flex',gap:8,justifyContent:'flex-end',marginBottom:18}}>
+          <button className="btn" onClick={onClose}>Tutup</button>
+          <button className="btn btn-primary" onClick={()=>onSave(sid,key)}>Simpan & Connect</button>
+        </div>
+
+        <div style={{padding:13,background:'rgba(14,165,201,.06)',border:'1px solid rgba(14,165,201,.2)',borderRadius:8}}>
+          <div style={{fontSize:11,color:'var(--teal)',fontWeight:600,marginBottom:5}}>💡 Mode Offline</div>
+          <div style={{fontSize:12,color:'var(--muted)',lineHeight:1.6,marginBottom:10}}>
+            Belum setup Google Sheets? App tetap bisa digunakan dengan data lokal di browser.
+          </div>
+          <button className="btn" style={{fontSize:11}} onClick={onOffline}>Gunakan Mode Offline</button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ─── MAIN APP COMPONENT ───────────────────────────────────────────────────────
+function App() {
+  // ── State ──
+  const [data,      setData]    = useState(() => loadLocal() || deep(SEED));
+  const [view,      setView]    = useState('iface');
+  const [sheet,     setSheet]   = useState('VG');
+  const [search,    setSearch]  = useState('');
+  const [fDevice,   setFDevice] = useState('');
+  const [fType,     setFType]   = useState('');
+  const [fStatus,   setFStatus] = useState('');
+  const [sortKey,   setSortKey] = useState('');
+  const [sortDir,   setSortDir] = useState(1);
+  const [page,      setPage]    = useState(1);
+  const [modal,     setModal]   = useState(null);   // {mode:'add'|'edit', idx:number|null}
+  const [showSetup, setShowSetup] = useState(false);
+  const [syncing,   setSyncing] = useState(false);
+  const [syncMsg,   setSyncMsg] = useState('');
+  const [toasts,    setToasts]  = useState([]);
+  const [gsSheetId, setGsSheetId] = useState(() => localStorage.getItem('ipcn_sheet_id') || '');
+  const [gsApiKey,  setGsApiKey]  = useState(() => localStorage.getItem('ipcn_api_key')  || '');
+  const [connected, setConnected] = useState(false);
+  const [offline,   setOffline]   = useState(false);
+  const [isLight,   setIsLight]   = useState(() => localStorage.getItem('ipcn_theme') === 'light');
+  const [selectedRow, setSelectedRow] = useState(null);
+  const searchRef = useRef(null);
+
+  // ── Theme ──
+  useEffect(() => {
+    const html = document.documentElement;
+    html.classList.add('transitioning');
+    html.classList.toggle('light', isLight);
+    setTimeout(() => html.classList.remove('transitioning'), 280);
+    localStorage.setItem('ipcn_theme', isLight ? 'light' : 'dark');
+  }, [isLight]);
+
+  // ── Keyboard shortcuts ──
+  useEffect(() => {
+    const handler = e => {
+      if (e.key === 'Escape') setModal(null);
+      if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+        e.preventDefault();
+        searchRef.current?.focus();
+      }
+      if ((e.key === 't' || e.key === 'T') &&
+          document.activeElement.tagName !== 'INPUT' &&
+          document.activeElement.tagName !== 'TEXTAREA' &&
+          document.activeElement.tagName !== 'SELECT') {
+        setIsLight(l => !l);
+      }
+    };
+    document.addEventListener('keydown', handler);
+    return () => document.removeEventListener('keydown', handler);
+  }, []);
+
+  // ── Auto-connect on load ──
+  useEffect(() => {
+    if (gsSheetId && gsApiKey) syncFromSheets(gsSheetId, gsApiKey);
+    else setOffline(true);
+  }, []);
+
+  // ── Toast helper ──
+  const toast = useCallback((icon, msg, color = 'var(--teal)') => {
+    const id = Date.now();
+    setToasts(t => [...t, { id, icon, msg, color }]);
+    setTimeout(() => setToasts(t => t.filter(x => x.id !== id)), 3000);
+  }, []);
+
+  // ── Source rows ──
+  const srcRows = useMemo(() =>
+    view === 'iface' ? (data.iface[sheet] || []) : (data.vlan[sheet] || []),
+    [data, view, sheet]);
+
+  // ── Filtered + sorted ──
+  const filtered = useMemo(() => {
+    const q = search.toLowerCase().trim();
+    let rows = srcRows.filter(r => {
+      if (fDevice && r.device !== fDevice) return false;
+      if (fType   && r.type   !== fType)   return false;
+      if (fStatus && r.status !== fStatus) return false;
+      if (q) {
+        const hay = Object.values(r).join(' ').toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      return true;
+    });
+    if (sortKey) {
+      rows = [...rows].sort((a, b) => {
+        let va = a[sortKey] ?? '', vb = b[sortKey] ?? '';
+        if (!isNaN(va) && !isNaN(vb)) return (Number(va) - Number(vb)) * sortDir;
+        return String(va).localeCompare(String(vb)) * sortDir;
+      });
+    }
+    return rows;
+  }, [srcRows, search, fDevice, fType, fStatus, sortKey, sortDir]);
+
+  // ── Page slice ──
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const pageRows   = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset page on filter change
+  useEffect(() => setPage(1), [search, fDevice, fType, fStatus, view, sheet]);
+
+  // ── Unique devices for dropdown ──
+  const devices = useMemo(() =>
+    [...new Set(srcRows.map(r => r.device).filter(Boolean))].sort(),
+    [srcRows]);
+
+  // ── Stats ──
+  const withIp = view === 'iface' ? srcRows.filter(r => r.ip).length : '—';
+
+  // ── Sort handler ──
+  const handleSort = key => {
+    if (sortKey === key) setSortDir(d => d * -1);
+    else { setSortKey(key); setSortDir(1); }
+  };
+  const sortArrow = key => sortKey === key ? (sortDir === 1 ? ' ↑' : ' ↓') : ' ↕';
+
+  // ── Switch view ──
+  const switchView = (v, s) => {
+    setView(v); setSheet(s);
+    setSearch(''); setFDevice(''); setFType(''); setFStatus('');
+    setSortKey(''); setSortDir(1); setSelectedRow(null);
+  };
+
+  // ── CRUD ──
+  const persist = useCallback((newData) => {
+    setData(newData);
+    saveLocal(newData);
+  }, []);
+
+  const saveRow = useCallback((row) => {
+    const nd = deep(data);
+    const arr = view === 'iface' ? nd.iface[sheet] : nd.vlan[sheet];
+    if (modal.mode === 'add') arr.push(row);
+    else arr[modal.idx] = row;
+    persist(nd);
+    const target = view === 'iface' ? sheet : 'VLAN_' + sheet;
+    writeToSheets(target, arr, view === 'iface' ? IFACE_COLS : VLAN_COLS);
+    toast('✓', modal.mode === 'add' ? 'Data berhasil ditambahkan' : 'Data berhasil diubah', 'var(--green)');
+    setModal(null);
+  }, [data, view, sheet, modal, persist, toast]);
+
+  const deleteRow = useCallback((idx) => {
+    if (!confirm('Hapus data ini?')) return;
+    const nd = deep(data);
+    const arr = view === 'iface' ? nd.iface[sheet] : nd.vlan[sheet];
+    arr.splice(idx, 1);
+    persist(nd);
+    const target = view === 'iface' ? sheet : 'VLAN_' + sheet;
+    writeToSheets(target, arr, view === 'iface' ? IFACE_COLS : VLAN_COLS);
+    toast('✓', 'Data berhasil dihapus', 'var(--red)');
+  }, [data, view, sheet, persist, toast]);
+
+  // ── Google Sheets ──
+  async function syncFromSheets(sid, key) {
+    const id  = sid  || gsSheetId;
+    const api = key  || gsApiKey;
+    if (!id || !api) { setShowSetup(true); return; }
+    setSyncing(true); setSyncMsg('Membaca data dari Google Sheets…');
+    try {
+      const names = [...IFACE_SHEETS, ...VLAN_SHEETS.map(k => 'VLAN_' + k)];
+      const ranges = names.map(n => encodeURIComponent(n + '!A1:Z500')).join('&ranges=');
+      const res = await fetch(`${GS_BASE}/${id}/values:batchGet?ranges=${ranges}&key=${api}`);
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      const json = await res.json();
+      const nd = deep(data);
+      json.valueRanges.forEach(vr => {
+        const sn = vr.range.split('!')[0].replace(/'/g, '');
+        const rows = vr.values || [];
+        if (!rows.length) return;
+        const headers = rows[0].map(h => h.toLowerCase().trim());
+        const dataRows = rows.slice(1).map(r => {
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = r[i] || '');
+          return obj;
+        });
+        if (sn.startsWith('VLAN_')) {
+          const site = sn.replace('VLAN_', '');
+          if (nd.vlan[site] !== undefined) nd.vlan[site] = dataRows;
+        } else {
+          if (nd.iface[sn] !== undefined) nd.iface[sn] = dataRows;
+        }
+      });
+      persist(nd);
+      setConnected(true); setOffline(false);
+      setSyncing(false);
+      toast('✓', 'Berhasil sync dari Google Sheets', 'var(--green)');
+    } catch (e) {
+      setSyncing(false);
+      setOffline(true);
+      toast('✗', 'Gagal sync: ' + e.message, 'var(--red)');
+    }
+  }
+
+  async function writeToSheets(sheetName, rows, cols) {
+    const id = gsSheetId; const api = gsApiKey;
+    if (!id || !api || offline) return;
+    const values = [cols, ...rows.map(r => cols.map(c => String(r[c] ?? '')))];
+    try {
+      await fetch(
+        `${GS_BASE}/${id}/values/${encodeURIComponent(sheetName + '!A1')}?valueInputOption=RAW&key=${api}`,
+        { method:'PUT', headers:{'Content-Type':'application/json'}, body: JSON.stringify({ values }) }
+      );
+    } catch { toast('⚠', 'Tersimpan lokal, gagal sync ke Sheets', 'var(--amber)'); }
+  }
+
+  const handleSetupSave = (sid, key) => {
+    if (!sid || !key) { toast('⚠', 'Isi Spreadsheet ID dan API Key', 'var(--amber)'); return; }
+    setGsSheetId(sid); setGsApiKey(key);
+    localStorage.setItem('ipcn_sheet_id', sid);
+    localStorage.setItem('ipcn_api_key',  key);
+    setOffline(false); setShowSetup(false);
+    syncFromSheets(sid, key);
+  };
+
+  const handleOfflineMode = () => {
+    setOffline(true); setShowSetup(false);
+    toast('💾', 'Menggunakan data lokal di browser', 'var(--amber)');
+  };
+
+  // ── Export CSV ──
+  const exportCSV = () => {
+    const cols = view === 'iface' ? IFACE_COLS : VLAN_COLS;
+    const rows = filtered.length ? filtered : srcRows;
+    let csv = cols.join(',') + '\n';
+    rows.forEach(r => {
+      csv += cols.map(c => `"${String(r[c] || '').replace(/"/g, '""')}"`).join(',') + '\n';
+    });
+    const a = document.createElement('a');
+    a.href = 'data:text/csv;charset=utf-8,' + encodeURIComponent(csv);
+    a.download = `IPCN_${sheet}_${new Date().toISOString().slice(0,10)}.csv`;
+    a.click();
+    toast('↓', 'CSV berhasil diexport', 'var(--teal)');
+  };
+
+  // ── Status pill ──
+  const statusInfo = connected
+    ? { dot: 'dot-ok',   txt: `Terhubung ke Sheets` }
+    : offline
+    ? { dot: 'dot-warn', txt: 'Mode offline — data lokal' }
+    : { dot: 'dot-warn', txt: 'Belum terhubung' };
+
+  // ── Th helper ──
+  const Th = ({ k, label, w }) => (
+    <th className={sortKey === k ? 'sorted' : ''} style={{width:w}} onClick={() => handleSort(k)}>
+      {label}<span style={{opacity:.4,fontSize:9}}>{sortArrow(k)}</span>
+    </th>
+  );
+
+  // ─── RENDER ───────────────────────────────────────────────────────────────
+  return (
+    <>
+      {/* TOPBAR */}
+      <header className="topbar">
+        <div className="logo">
+          <div className="logo-mark">🌐</div>
+          <div>
+            <div className="logo-name">IPCN Interface Manager</div>
+            <div className="logo-sub">Network · Mapping · OPEX</div>
+          </div>
+        </div>
+
+        <div className="status-pill">
+          <div className={`dot ${statusInfo.dot}`} />
+          <span>{statusInfo.txt}</span>
+        </div>
+        <button className="btn" onClick={() => setShowSetup(true)}>⚙ Setup</button>
+
+        <div className="topbar-spacer" />
+
+        {/* Theme toggle */}
+        <div className="theme-toggle" onClick={() => setIsLight(l => !l)} title="Toggle light/dark (T)">
+          <div className="tt-track"><div className="tt-thumb" /></div>
+          <span style={{fontSize:13}}>{isLight ? '☀️' : '🌙'}</span>
+          <span className="tt-lbl">{isLight ? 'LIGHT' : 'DARK'}</span>
+        </div>
+
+        <button className="btn" onClick={() => syncFromSheets()}>↻ Sync</button>
+        <button className="btn btn-success" onClick={() => setModal({ mode:'add', idx:null })}>+ Tambah</button>
+      </header>
+
+      {/* LAYOUT */}
+      <div className="layout">
+
+        {/* SIDEBAR */}
+        <nav className="sidebar">
+          <div className="sidebar-sec">
+            <div className="sidebar-lbl">Interface Maps</div>
+            {IFACE_SHEETS.map(s => (
+              <div key={s}
+                className={`nav-item${view==='iface' && sheet===s ? ' active' : ''}`}
+                onClick={() => switchView('iface', s)}>
+                <span className="nav-icon">{NAV_ICONS[s]}</span>
+                {s === 'SRVESXI' ? 'Server/ESXi' : s}
+                <span className="nav-count">{(data.iface[s]||[]).length}</span>
+              </div>
+            ))}
+          </div>
+          <div className="sidebar-sec">
+            <div className="sidebar-lbl">VLAN Tables</div>
+            {VLAN_SHEETS.map(s => (
+              <div key={s}
+                className={`nav-item${view==='vlan' && sheet===s ? ' active' : ''}`}
+                onClick={() => switchView('vlan', s)}>
+                <span className="nav-icon">▦</span>
+                {s}
+                <span className="nav-count">{(data.vlan[s]||[]).length}</span>
+              </div>
+            ))}
+          </div>
+        </nav>
+
+        {/* CONTENT */}
+        <div className="content">
+
+          {/* STATS */}
+          <div className="stats-row">
+            {[
+              { icon:'⇄', val: srcRows.length,    lbl:'Total Rows'  },
+              { icon:'🔍', val: filtered.length,   lbl:'Filtered'    },
+              { icon:'🌐', val: withIp,             lbl:'With IP'     },
+              { icon:'⚙',  val: sheet,             lbl:'Sheet'       },
+            ].map((s, i) => (
+              <div key={i} className="stat-cell">
+                <div className="stat-icon">{s.icon}</div>
+                <div>
+                  <div className="stat-val">{s.val}</div>
+                  <div className="stat-lbl">{s.lbl}</div>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          {/* TOOLBAR */}
+          <div className="toolbar">
+            <div className="search-wrap">
+              <span className="search-icon">⌕</span>
+              <input ref={searchRef} type="text" value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Cari interface, IP, deskripsi… (Ctrl+K)" />
+            </div>
+
+            <select value={fDevice} onChange={e => setFDevice(e.target.value)}>
+              <option value="">Semua Device</option>
+              {devices.map(d => <option key={d}>{d}</option>)}
+            </select>
+
+            {view === 'iface' && (
+              <select value={fType} onChange={e => setFType(e.target.value)}>
+                <option value="">Semua Tipe</option>
+                {['Trunk','Access','Ethernet','Sub Interface'].map(t => <option key={t}>{t}</option>)}
+              </select>
+            )}
+
+            {view === 'vlan' && (
+              <select value={fStatus} onChange={e => setFStatus(e.target.value)}>
+                <option value="">Semua Status</option>
+                <option>In Use</option><option>Available</option>
+              </select>
+            )}
+
+            <div className="toolbar-r">
+              <span className="result-info">{filtered.length} hasil</span>
+              <button className="btn" onClick={exportCSV}>↓ CSV</button>
+            </div>
+          </div>
+
+          {/* TABLE */}
+          <div className="table-area">
+            <div className="table-wrap">
+              {pageRows.length === 0 ? (
+                <div className="empty-state">
+                  <div className="empty-icon">◯</div>
+                  <div>Tidak ada data yang cocok</div>
+                </div>
+              ) : (
+                <table>
+                  <thead>
+                    <tr>
+                      {view === 'iface' ? <>
+                        <Th k="device"    label="Device"    w={140} />
+                        <Th k="no"        label="No"        w={50}  />
+                        <Th k="interface" label="Interface" w={170} />
+                        <Th k="type"      label="Tipe"      w={110} />
+                        <Th k="vlan"      label="VLAN"      w={80}  />
+                        <Th k="ip"        label="IP Address" w={150}/>
+                        <Th k="desc"      label="Deskripsi" w={220} />
+                        <th style={{width:80}}>Aksi</th>
+                      </> : <>
+                        <Th k="no"         label="No"       w={50}  />
+                        <Th k="allocation" label="Alokasi"  w={170} />
+                        <Th k="range"      label="Range"    w={100} />
+                        <Th k="vlan"       label="VLAN ID"  w={80}  />
+                        <Th k="desc"       label="Deskripsi" w={260}/>
+                        <Th k="status"     label="Status"   w={110} />
+                        <th style={{width:80}}>Aksi</th>
+                      </>}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {pageRows.map((r, i) => {
+                      const realIdx = srcRows.indexOf(r);
+                      const q = search.toLowerCase().trim();
+                      const isSelected = selectedRow === realIdx;
+                      return (
+                        <tr key={i}
+                          className={isSelected ? 'selected-row' : ''}
+                          onClick={() => setSelectedRow(isSelected ? null : realIdx)}>
+                          {view === 'iface' ? <>
+                            <td><span className="td-device">{q ? hlText(r.device||'', q) : r.device}</span></td>
+                            <td><span className="td-no">{r.no}</span></td>
+                            <td><span className="td-intf">{q ? hlText(r.interface||'', q) : r.interface}</span></td>
+                            <td><TypeBadge type={r.type} q={q} /></td>
+                            <td><span style={{fontFamily:'JetBrains Mono',fontSize:11,color:'var(--muted)'}}>{r.vlan||'—'}</span></td>
+                            <td>{r.ip ? <span className="td-ip">{q ? hlText(r.ip, q) : r.ip}</span> : <span style={{color:'var(--dim)'}}>—</span>}</td>
+                            <td style={{maxWidth:220,overflow:'hidden',textOverflow:'ellipsis',whiteSpace:'nowrap',fontSize:12}}>
+                              {q ? hlText(r.desc||'', q) : r.desc}
+                            </td>
+                          </> : <>
+                            <td><span className="td-no">{r.no}</span></td>
+                            <td style={{fontSize:12,color:'var(--text)'}}>{q ? hlText(r.allocation||'', q) : r.allocation}</td>
+                            <td style={{fontFamily:'JetBrains Mono',fontSize:11,color:'var(--muted)'}}>{r.range}</td>
+                            <td style={{fontFamily:'JetBrains Mono',fontSize:14,fontWeight:700,color:'var(--text)'}}>{q ? hlText(String(r.vlan||''), q) : r.vlan}</td>
+                            <td style={{fontSize:12}}>{q ? hlText(r.desc||'', q) : r.desc}</td>
+                            <td>
+                              {r.status === 'In Use'
+                                ? <span className="badge b-inuse">● In Use</span>
+                                : <span className="badge b-avail">○ Available</span>}
+                            </td>
+                          </>}
+                          <td onClick={e => e.stopPropagation()}>
+                            <div style={{display:'flex',gap:4}}>
+                              <button className="btn btn-sm"
+                                onClick={() => setModal({ mode:'edit', idx: realIdx })}>Edit</button>
+                              <button className="btn btn-sm btn-danger"
+                                onClick={() => deleteRow(realIdx)}>Hapus</button>
+                            </div>
+                          </td>
+                        </tr>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              )}
+            </div>
+
+            {/* FOOTER */}
+            <div className="table-footer">
+              <span style={{fontFamily:'JetBrains Mono'}}>
+                {filtered.length > 0
+                  ? `${(page-1)*PAGE_SIZE+1}–${Math.min(page*PAGE_SIZE, filtered.length)} dari ${filtered.length}`
+                  : '0 hasil'}
+              </span>
+              <div className="pagination">
+                <button className="pg-btn" disabled={page===1} onClick={() => setPage(p=>p-1)}>‹</button>
+                {Array.from({length: totalPages}, (_, i) => i+1)
+                  .filter(p => p===1 || p===totalPages || Math.abs(p-page)<=1)
+                  .reduce((acc, p, i, arr) => {
+                    if (i > 0 && p - arr[i-1] > 1) acc.push('…');
+                    acc.push(p);
+                    return acc;
+                  }, [])
+                  .map((p, i) => typeof p === 'string'
+                    ? <button key={`e${i}`} className="pg-btn" disabled>…</button>
+                    : <button key={p} className={`pg-btn${p===page?' active':''}`} onClick={()=>setPage(p)}>{p}</button>
+                  )}
+                <button className="pg-btn" disabled={page===totalPages||totalPages===0} onClick={()=>setPage(p=>p+1)}>›</button>
+              </div>
+            </div>
+          </div>
+
+        </div>{/* /content */}
+      </div>{/* /layout */}
+
+      {/* MODALS */}
+      {modal && (
+        <RowModal
+          isIface={view === 'iface'}
+          row={modal.mode === 'edit' ? srcRows[modal.idx] : null}
+          title={modal.mode === 'add' ? 'Tambah Data Baru' : 'Edit Data'}
+          onSave={saveRow}
+          onClose={() => setModal(null)}
+        />
+      )}
+
+      {showSetup && (
+        <SetupModal
+          sheetId={gsSheetId}
+          apiKey={gsApiKey}
+          onSave={handleSetupSave}
+          onOffline={handleOfflineMode}
+          onClose={() => setShowSetup(false)}
+        />
+      )}
+
+      {/* SYNC OVERLAY */}
+      {syncing && (
+        <div className="sync-overlay">
+          <div className="spinner" />
+          <div className="sync-msg">{syncMsg}</div>
+        </div>
+      )}
+
+      {/* TOASTS */}
+      <Toast toasts={toasts} />
+    </>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
